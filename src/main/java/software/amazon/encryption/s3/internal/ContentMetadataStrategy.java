@@ -23,6 +23,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
 
 import static software.amazon.encryption.s3.S3EncryptionClientUtilities.INSTRUCTION_FILE_SUFFIX;
 
@@ -42,12 +43,14 @@ public abstract class ContentMetadataStrategy implements ContentMetadataEncoding
 
             ResponseBytes<GetObjectResponse> instruction;
             try {
-                instruction = s3AsyncClient.getObject(instructionGetObjectRequest, AsyncResponseTransformer.toBytes()).join();
+                instruction = s3AsyncClient.getObject(instructionGetObjectRequest, AsyncResponseTransformer.toBytes()).get();
             } catch (NoSuchKeyException exception) {
                 // Most likely, the customer is attempting to decrypt an object
                 // which is not encrypted with the S3 EC.
                 throw new S3EncryptionClientException("Instruction file not found! Please ensure the object you are" +
                         " attempting to decrypt has been encrypted using the S3 Encryption Client.", exception);
+            } catch (ExecutionException | InterruptedException e) {
+                throw new S3EncryptionClientException(e.getMessage(), e);
             }
 
             Map<String, String> metadata = new HashMap<>();

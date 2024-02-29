@@ -203,7 +203,7 @@ public class S3EncryptionClient extends DelegatingS3Client {
                 )
             );
 
-            PutObjectResponse response = futurePut.join();
+            PutObjectResponse response = futurePut.get();
 
             singleThreadExecutor.shutdown();
 
@@ -249,8 +249,8 @@ public class S3EncryptionClient extends DelegatingS3Client {
                 .build();
 
         try {
-            ResponseInputStream<GetObjectResponse> joinFutureGet = pipeline.getObject(getObjectRequest, AsyncResponseTransformer.toBlockingInputStream()).join();
-            return responseTransformer.transform(joinFutureGet.response(), AbortableInputStream.create(joinFutureGet));
+            ResponseInputStream<GetObjectResponse>  futureGet = pipeline.getObject(getObjectRequest, AsyncResponseTransformer.toBlockingInputStream()).get();
+            return responseTransformer.transform(futureGet.response(), AbortableInputStream.create(futureGet));
         } catch (CompletionException e) {
             throw new S3EncryptionClientException(e.getCause().getMessage(), e.getCause());
         } catch (Exception e) {
@@ -364,7 +364,7 @@ public class S3EncryptionClient extends DelegatingS3Client {
 
         try {
             // Delete the object
-            DeleteObjectResponse deleteObjectResponse = _wrappedAsyncClient.deleteObject(actualRequest).join();
+            DeleteObjectResponse deleteObjectResponse = _wrappedAsyncClient.deleteObject(actualRequest).get();
             // If Instruction file exists, delete the instruction file as well.
             String instructionObjectKey = deleteObjectRequest.key() + INSTRUCTION_FILE_SUFFIX;
             _wrappedAsyncClient.deleteObject(builder -> builder
@@ -397,7 +397,7 @@ public class S3EncryptionClient extends DelegatingS3Client {
                 .build();
         try {
             // Delete the objects
-            DeleteObjectsResponse deleteObjectsResponse = _wrappedAsyncClient.deleteObjects(actualRequest).join();
+            DeleteObjectsResponse deleteObjectsResponse = _wrappedAsyncClient.deleteObjects(actualRequest).get();
             // If Instruction files exists, delete the instruction files as well.
             List<ObjectIdentifier> deleteObjects = instructionFileKeysToDelete(deleteObjectsRequest);
             _wrappedAsyncClient.deleteObjects(DeleteObjectsRequest.builder()

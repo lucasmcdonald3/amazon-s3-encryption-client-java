@@ -39,6 +39,7 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -213,8 +214,7 @@ public class S3AsyncEncryptionClient extends DelegatingS3AsyncClient {
                 .bucket(deleteObjectRequest.bucket())
                 .key(instructionObjectKey));
         // Delete the instruction file, then delete the object
-        Function<DeleteObjectResponse, DeleteObjectResponse> deletion = deleteObjectResponse ->
-                response.join();
+        Function<DeleteObjectResponse, DeleteObjectResponse> deletion = deleteObjectResponse -> response.join();
         return instructionResponse.thenApplyAsync(deletion);
     }
 

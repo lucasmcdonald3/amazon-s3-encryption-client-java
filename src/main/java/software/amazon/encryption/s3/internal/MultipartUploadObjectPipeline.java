@@ -32,6 +32,7 @@ import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -59,7 +60,7 @@ public class MultipartUploadObjectPipeline {
         return new Builder();
     }
 
-    public CreateMultipartUploadResponse createMultipartUpload(CreateMultipartUploadRequest request) {
+    public CreateMultipartUploadResponse createMultipartUpload(CreateMultipartUploadRequest request) throws ExecutionException, InterruptedException {
         EncryptionMaterialsRequest.Builder requestBuilder = EncryptionMaterialsRequest.builder()
                 .s3Request(request);
 
@@ -73,7 +74,7 @@ public class MultipartUploadObjectPipeline {
                 .overrideConfiguration(API_NAME_INTERCEPTOR)
                 .metadata(metadata).build();
 
-        CreateMultipartUploadResponse response = _s3AsyncClient.createMultipartUpload(request).join();
+        CreateMultipartUploadResponse response = _s3AsyncClient.createMultipartUpload(request).get();
 
         MultipartUploadMaterials mpuMaterials = MultipartUploadMaterials.builder()
                 .fromEncryptionMaterials(materials)
@@ -86,7 +87,7 @@ public class MultipartUploadObjectPipeline {
     }
 
     public UploadPartResponse uploadPart(UploadPartRequest request, RequestBody requestBody)
-            throws AwsServiceException, SdkClientException {
+            throws AwsServiceException, SdkClientException, ExecutionException, InterruptedException {
 
         final AlgorithmSuite algorithmSuite = AlgorithmSuite.ALG_AES_256_GCM_IV12_TAG16_NO_KDF;
         final int blockSize = algorithmSuite.cipherBlockSizeBytes();
@@ -158,7 +159,7 @@ public class MultipartUploadObjectPipeline {
             }
             // Ensures parts are not retried to avoid corrupting ciphertext
             AsyncRequestBody noRetryBody = new NoRetriesAsyncRequestBody(cipherAsyncRequestBody);
-            response =  _s3AsyncClient.uploadPart(actualRequest, noRetryBody).join();
+            response =  _s3AsyncClient.uploadPart(actualRequest, noRetryBody).get();
         } finally {
             materials.endPartUpload();
         }
@@ -172,7 +173,7 @@ public class MultipartUploadObjectPipeline {
     }
 
     public CompleteMultipartUploadResponse completeMultipartUpload(CompleteMultipartUploadRequest request)
-            throws AwsServiceException, SdkClientException {
+            throws AwsServiceException, SdkClientException, ExecutionException, InterruptedException {
         String uploadId = request.uploadId();
         final MultipartUploadMaterials uploadContext = _multipartUploadMaterials.get(uploadId);
 
@@ -186,18 +187,18 @@ public class MultipartUploadObjectPipeline {
                 .overrideConfiguration(API_NAME_INTERCEPTOR)
                 .build();
 
-        CompleteMultipartUploadResponse response = _s3AsyncClient.completeMultipartUpload(actualRequest).join();
+        CompleteMultipartUploadResponse response = _s3AsyncClient.completeMultipartUpload(actualRequest).get();
 
         _multipartUploadMaterials.remove(uploadId);
         return response;
     }
 
-    public AbortMultipartUploadResponse abortMultipartUpload(AbortMultipartUploadRequest request) {
+    public AbortMultipartUploadResponse abortMultipartUpload(AbortMultipartUploadRequest request) throws ExecutionException, InterruptedException {
         _multipartUploadMaterials.remove(request.uploadId());
         AbortMultipartUploadRequest actualRequest = request.toBuilder()
                 .overrideConfiguration(API_NAME_INTERCEPTOR)
                 .build();
-        return _s3AsyncClient.abortMultipartUpload(actualRequest).join();
+        return _s3AsyncClient.abortMultipartUpload(actualRequest).get();
     }
 
     public void putLocalObject(RequestBody requestBody, String uploadId, OutputStream os) throws IOException {

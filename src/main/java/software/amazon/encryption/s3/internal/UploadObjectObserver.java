@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -72,7 +73,7 @@ public class UploadObjectObserver {
                 try {
                     AsyncRequestBody noRetriesBody = new NoRetriesAsyncRequestBody(AsyncRequestBody.fromFile(part));
                     return uploadPart(reqUploadPart, noRetriesBody);
-                } catch (CompletionException e) {
+                } catch (CompletionException | ExecutionException | InterruptedException e) {
                     // Unwrap completion exception
                     throw new S3EncryptionClientException(e.getCause().getMessage(), e.getCause());
                 } finally {
@@ -130,10 +131,10 @@ public class UploadObjectObserver {
                 .build();
     }
 
-    protected Map<Integer, UploadPartResponse> uploadPart(UploadPartRequest reqUploadPart, AsyncRequestBody requestBody) {
+    protected Map<Integer, UploadPartResponse> uploadPart(UploadPartRequest reqUploadPart, AsyncRequestBody requestBody) throws ExecutionException, InterruptedException {
         // Upload the ciphertext directly via the non-encrypting
         // s3 client
-        return Collections.singletonMap(reqUploadPart.partNumber(), s3AsyncClient.uploadPart(reqUploadPart, requestBody).join());
+        return Collections.singletonMap(reqUploadPart.partNumber(), s3AsyncClient.uploadPart(reqUploadPart, requestBody).get());
     }
 
     public List<Future<Map<Integer, UploadPartResponse>>> futures() {
