@@ -209,9 +209,9 @@ public class S3EncryptionClient extends DelegatingS3Client {
 
             return response;
 
-        } catch (CompletionException completionException) {
+        } catch (CompletionException | ExecutionException | InterruptedException e) {
             singleThreadExecutor.shutdownNow();
-            throw new S3EncryptionClientException(completionException.getMessage(), completionException.getCause());
+            throw new S3EncryptionClientException(e.getMessage(), e.getCause());
         } catch (Exception exception) {
             singleThreadExecutor.shutdownNow();
             throw new S3EncryptionClientException(exception.getMessage(), exception);
@@ -251,7 +251,7 @@ public class S3EncryptionClient extends DelegatingS3Client {
         try {
             ResponseInputStream<GetObjectResponse>  futureGet = pipeline.getObject(getObjectRequest, AsyncResponseTransformer.toBlockingInputStream()).get();
             return responseTransformer.transform(futureGet.response(), AbortableInputStream.create(futureGet));
-        } catch (CompletionException e) {
+        } catch (CompletionException | ExecutionException | InterruptedException e) {
             throw new S3EncryptionClientException(e.getCause().getMessage(), e.getCause());
         } catch (Exception e) {
             throw new S3EncryptionClientException("Unable to transform response.", e);
@@ -373,10 +373,10 @@ public class S3EncryptionClient extends DelegatingS3Client {
                     .key(instructionObjectKey)).join();
             // Return original deletion
             return deleteObjectResponse;
-        } catch (CompletionException e) {
+        } catch (CompletionException | ExecutionException | InterruptedException e) {
             throw new S3EncryptionClientException(e.getCause().getMessage(), e.getCause());
         } catch (Exception e) {
-            throw new S3EncryptionClientException("Unable to delete object.", e);
+            throw new S3EncryptionClientException("Unable to complete Multipart upload.", e);
         }
     }
 
@@ -406,10 +406,10 @@ public class S3EncryptionClient extends DelegatingS3Client {
                     .delete(builder -> builder.objects(deleteObjects))
                     .build()).join();
             return deleteObjectsResponse;
-        } catch (CompletionException e) {
+        } catch (CompletionException | ExecutionException | InterruptedException e) {
             throw new S3EncryptionClientException(e.getCause().getMessage(), e.getCause());
         } catch (Exception e) {
-            throw new S3EncryptionClientException("Unable to delete objects.", e);
+            throw new S3EncryptionClientException("Unable to complete Multipart upload.", e);
         }
     }
 
@@ -427,10 +427,10 @@ public class S3EncryptionClient extends DelegatingS3Client {
     public CreateMultipartUploadResponse createMultipartUpload(CreateMultipartUploadRequest request) {
         try {
             return _multipartPipeline.createMultipartUpload(request);
-        } catch (CompletionException e) {
+        } catch (CompletionException | ExecutionException | InterruptedException e) {
             throw new S3EncryptionClientException(e.getCause().getMessage(), e.getCause());
         } catch (Exception e) {
-            throw new S3EncryptionClientException("Unable to create Multipart upload.", e);
+            throw new S3EncryptionClientException("Unable to complete Multipart upload.", e);
         }
     }
 
@@ -450,10 +450,10 @@ public class S3EncryptionClient extends DelegatingS3Client {
             throws AwsServiceException, SdkClientException {
         try {
             return _multipartPipeline.uploadPart(request, requestBody);
-        } catch (CompletionException e) {
+        } catch (CompletionException | ExecutionException | InterruptedException e) {
             throw new S3EncryptionClientException(e.getCause().getMessage(), e.getCause());
         } catch (Exception e) {
-            throw new S3EncryptionClientException("Unable to upload part.", e);
+            throw new S3EncryptionClientException("Unable to complete Multipart upload.", e);
         }
     }
 
@@ -467,7 +467,7 @@ public class S3EncryptionClient extends DelegatingS3Client {
             throws AwsServiceException, SdkClientException {
         try {
             return _multipartPipeline.completeMultipartUpload(request);
-        } catch (CompletionException e) {
+        } catch (CompletionException | ExecutionException | InterruptedException e) {
             throw new S3EncryptionClientException(e.getCause().getMessage(), e.getCause());
         } catch (Exception e) {
             throw new S3EncryptionClientException("Unable to complete Multipart upload.", e);
@@ -484,10 +484,10 @@ public class S3EncryptionClient extends DelegatingS3Client {
             throws AwsServiceException, SdkClientException {
         try {
             return _multipartPipeline.abortMultipartUpload(request);
-        } catch (CompletionException e) {
+        } catch (CompletionException | ExecutionException | InterruptedException e) {
             throw new S3EncryptionClientException(e.getCause().getMessage(), e.getCause());
         } catch (Exception e) {
-            throw new S3EncryptionClientException("Unable to abort Multipart upload.", e);
+            throw new S3EncryptionClientException("Unable to complete Multipart upload.", e);
         }
     }
 
